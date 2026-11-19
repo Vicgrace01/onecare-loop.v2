@@ -1,219 +1,355 @@
-# OneCare Loop v2
+<div align="center">
+  <img src="app/web/assets/mark.svg" alt="OneCare Loop mark" width="76" height="76" />
+  <h1>OneCare Loop</h1>
+  <h3>Close the gap between screening and completed care.</h3>
+  <p>A hypertension referral-closure and care-coordination prototype that makes every handoff visible, attributable and verifiable.</p>
+  <p>
+    <a href="https://onecare-loop-v2.onrender.com/"><img src="https://img.shields.io/badge/OPEN-LIVE%20PROTOTYPE-0F766E?style=for-the-badge" alt="Open live prototype" /></a>
+    <a href="https://onecare-loop-v2.onrender.com/demo"><img src="https://img.shields.io/badge/WATCH-AUTOMATIC%20DEMO-173B36?style=for-the-badge" alt="Watch automatic demo" /></a>
+    <a href="https://github.com/Vicgrace01/onecare-loop.v2/actions/workflows/ci.yml"><img src="https://github.com/Vicgrace01/onecare-loop.v2/actions/workflows/ci.yml/badge.svg?branch=main" alt="GitHub Actions" /></a>
+  </p>
+  <p>
+    <img src="https://img.shields.io/badge/Python-3.11%20%7C%203.12-3776AB?logo=python&logoColor=white" alt="Python versions" />
+    <img src="https://img.shields.io/badge/API-FastAPI-009688?logo=fastapi&logoColor=white" alt="FastAPI" />
+    <img src="https://img.shields.io/badge/Database-PostgreSQL%20%7C%20SQLite-4169E1?logo=postgresql&logoColor=white" alt="Database" />
+    <img src="https://img.shields.io/badge/License-MIT-64748B" alt="MIT license" />
+  </p>
+</div>
 
-**A referral cannot quietly disappear between a community pharmacy, hospital, clinician, patient and payer.**
+---
 
-OneCare Loop is a care-coordination and referral-closure platform for a hypertension pathway. It records the handoffs from a community screening through referral, hospital acceptance, appointment, attendance, clinician disposition and follow-up. Each patient journey is represented by a signed, hash-chained event history so changes can be detected and the sequence can be verified.
+## The problem
 
-This is a clean replacement for the original Flask prototype. The new application is a modular FastAPI monolith with SQLAlchemy 2, Pydantic 2 and Alembic. It is built as a single deployable service without splitting a prototype into premature microservices.
+A blood-pressure screening is only the beginning of a care pathway. A person may be screened at a community pharmacy, referred to a hospital, given an appointment and then become difficult to track. When the handoffs are fragmented, a positive screen can become a referral that nobody clearly owns.
 
-## Current release status
+**OneCare Loop is designed to make that journey traceable.** It gives community screening teams, receiving facilities, clinicians and health-plan reviewers role-specific workspaces around one longitudinal referral record and an auditable event history.
 
-| Area | Status |
-|---|---|
-| FastAPI application, data model and migrations | Implemented |
-| Hypertension screening-to-follow-up workflow | Implemented as a prototype; clinical review is still required |
-| Responsive web interface and one-click synthetic judge demo | Implemented locally |
-| Automated tests and CI | Regression fixes are being verified in GitHub Actions |
-| Hosted deployment | Not yet deployed |
-| Live NHIA/DHIN, SMS/WhatsApp, claims and emergency dispatch | Not connected; provider agreements and integration validation are still required |
+> **Product focus:** move from “screened” to “care received, outcome recorded and follow-up planned” — without pretending that a software workflow is a clinical diagnosis.
 
-The application is a single deployable FastAPI service. Its web interface is served by FastAPI; there is no separate Node frontend server. The interactive API reference is available at `http://127.0.0.1:8000/docs` when running in development mode.
+## Try the prototype
 
-## Product workflow
+<div align="center">
+  <a href="https://onecare-loop-v2.onrender.com/">**Open the live application**</a> &nbsp; · &nbsp;
+  <a href="https://onecare-loop-v2.onrender.com/demo">**Run the synthetic end-to-end demo**</a>
+</div>
 
-```text
-Patient consent + pharmacy/PMV screening
-                  |
-          Positive BP result
-                  |
-          Referral created
-                  |
-      Receiving hospital accepts
-                  |
-         Appointment booked
-                  |
-       Attendance attested
-                  |
- Clinician records confirmatory assessment
-      or documented not-indicated reason
-                  |
-    Assigned clinician disposition
-                  |
-          Follow-up scheduled
-                  |
-       Repeat BP assessment
-                  |
-        BP control recorded
+The hosted prototype runs as a FastAPI web service. The `/demo` page creates a synthetic case through the same care services used by the authenticated application, then visualises the persisted result and verifies its signed event chain.
+
+### Demo accounts
+
+The synthetic judge environment provisions four staff workspaces. Unless the corresponding `DEMO_*_EMAIL` variables have been overridden in the host configuration, the login emails are:
+
+| Workspace | Role | Login email | Main responsibility |
+|---|---|---|---|
+| Community pharmacy | `pharmacy` | `demo.pharmacy@onecareloop.com` | Record a consented screen and start a referral |
+| Hospital coordinator | `hospital` | `demo.hospital@onecareloop.com` | Accept, own, route and schedule incoming referrals |
+| Assigned clinician | `clinician` | `demo.clinician@onecareloop.com` | Record the confirmatory assessment, disposition and follow-up |
+| HMO reviewer | `hmo` | `demo.hmo@onecareloop.com` | Review aggregate referral and closure metrics |
+
+**Passwords are intentionally not stored in this repository.** In the isolated judging deployment, open the [demo page](https://onecare-loop-v2.onrender.com/demo) to view the configured credentials when `DEMO_SHOW_CREDENTIALS=true`. The page obtains them from the runtime configuration endpoint; they are not hard-coded into frontend JavaScript. Use these credentials only for the synthetic challenge environment.
+
+Staff sign in with **email + password** from the homepage. The patient portal is separate and uses a phone-based one-time-code flow; the four staff roles do not sign in with phone numbers.
+
+### What the automatic demo does
+
+1. Creates a synthetic patient and records consent.
+2. Records a positive blood-pressure screening at a community pharmacy.
+3. Creates a referral with urgency and a service-level deadline.
+4. Has the receiving hospital accept the referral and become its accountable owner.
+5. Books an appointment and records a simulated patient notification.
+6. Attests attendance against the assigned clinician.
+7. Records a clinician-entered confirmatory assessment and disposition.
+8. Schedules a 30-day follow-up plan.
+9. Verifies the patient's ordered, signed event chain.
+
+**Run** creates a new synthetic case. **Replay** reuses the last result and does not create duplicate records. The public demo endpoint is limited to five new runs per client IP per hour.
+
+---
+
+## The care journey
+
+The workflow is more than a referral form. Each transition is performed by an authorised role and recorded as an event.
+
+```mermaid
+flowchart LR
+    A[Community pharmacy] --> B[Consent and BP screening]
+    B --> C{Screen result}
+    C -->|Negative / inconclusive| D[Record result]
+    C -->|Positive| E[Create referral]
+    E --> F[Hospital accepts and owns referral]
+    F --> G[Appointment booked]
+    G --> H[Attendance attested]
+    H --> I[Assigned clinician assesses]
+    I --> J[Disposition recorded]
+    J --> K[Follow-up scheduled]
+    K --> L[Repeat assessment and BP control]
+    L -->|Next review due| K
 ```
 
-A negative or inconclusive screen is recorded but does not create a referral. Failure cases are explicit events: facility decline/unavailability, patient unreachable/decline, appointment missed and patient reschedule request. Recovery creates new events; it does not silently rewrite the event history.
+### Failure paths are recorded too
 
-## Architecture
+A facility decline or unavailability, missed appointment, unreachable patient, patient decline, or reschedule request is represented explicitly. Recovery appends new events; it does not silently erase the earlier attempt. Negative and inconclusive screens remain visible records but do not automatically create referrals.
 
-```text
-app/
-  api/         FastAPI routes, dependencies and error mapping
-  core/        configuration and authentication primitives
-  db/          SQLAlchemy models, engine and session lifecycle
-  domain/      care state machine and signed event ledger
-  schemas/     Pydantic request/response contracts
-  services/    authentication, privacy, care workflows and FHIR mapping
-migrations/    Alembic schema history
-  versions/    initial schema, integrity constraints, workflow/privacy, email encryption
-tests/          auth, permissions, domain, crypto, schema, care-journey, UI and Chromium browser tests
-docs/           architecture, care workflow, judge guide, operator guide and security review
+## Product capabilities
+
+| Capability | What the prototype implements |
+|---|---|
+| Role-based workspaces | Pharmacy, hospital, clinician and HMO views with server-side role checks |
+| Screening and referral | Consent capture, blood-pressure inputs, result recording, urgency and referral creation |
+| Referral ownership | Hospital acceptance, accountable facility ownership, clinician assignment and reassignment |
+| Appointment and attendance | Appointment booking, missed-appointment handling and attendance attestation |
+| Clinical disposition | Assigned clinician records a confirmatory assessment or a reason it is not indicated, then records the disposition |
+| Follow-up | Follow-up plan, due date, reassessment and BP-control records |
+| Exception visibility | Explicit failure events and an idempotent overdue-referral escalation command |
+| Patient communications | In-app notification records and referral-scoped consultation messages; external delivery is not connected |
+| Operations metrics | Referral counts, closure rate, median time to disposition and failure breakdown |
+| Audit integrity | Ordered event history, SHA-256 hash linking, Ed25519 signatures and verification endpoint |
+| Interoperability | Authenticated FHIR R4 collection-bundle export for supported resources |
+
+## System architecture
+
+OneCare Loop is a **modular monolith**: one deployable FastAPI application, one relational database and clear internal boundaries. This keeps the prototype deployable and testable without introducing premature microservices.
+
+```mermaid
+flowchart TB
+    subgraph People[People and workspaces]
+      P[Community pharmacy]
+      H[Hospital coordinator]
+      C[Assigned clinician]
+      M[HMO reviewer]
+      PT[Patient portal]
+    end
+
+    subgraph Delivery[Same-origin application]
+      UI[Responsive web client<br/>HTML · CSS · JavaScript]
+      API[FastAPI HTTP API<br/>/api/v1]
+      AUTH[Authentication<br/>role and organisation checks]
+    end
+
+    subgraph Core[Application and domain]
+      USE[Care and privacy services]
+      STATE[Care state machine<br/>transition invariants]
+      LEDGER[Signed event ledger<br/>SHA-256 + Ed25519]
+      FHIR[FHIR R4 export mapping]
+    end
+
+    subgraph Data[Persistence]
+      ORM[SQLAlchemy 2<br/>transaction boundary]
+      DB[(PostgreSQL hosted<br/>SQLite local development)]
+      MIG[Alembic migrations]
+    end
+
+    P --> UI
+    H --> UI
+    C --> UI
+    M --> UI
+    PT --> UI
+    UI <--> API
+    API --> AUTH
+    AUTH --> USE
+    USE --> STATE
+    USE --> FHIR
+    STATE --> LEDGER
+    USE --> ORM
+    LEDGER --> ORM
+    ORM <--> DB
+    MIG --> DB
 ```
 
-### Engineering decisions
+### Architecture decisions
 
-- **Modular monolith:** one application and one transaction boundary, with separate domain, service, HTTP and persistence layers.
-- **Database constraints:** the database enforces key role, state, urgency, BP-range and appointment invariants in addition to application validation.
-- **Authenticated actors:** API endpoints derive the actor and role from the verified bearer token. Client-supplied actor IDs/roles are not trusted.
-- **Organisation boundaries:** pharmacy/PMV users can work only on screenings from their own organisation; hospital actions are scoped to the receiving facility; consultation messages are scoped to the referral's care organisations; clinicians can submit the disposition only for the encounter assigned to them.
-- **Atomic workflows:** the state check, event append and related business records share the SQLAlchemy transaction. A failed transition or write rolls the complete operation back.
-- **Workflow-state isolation:** only canonical care-state events determine the next legal transition. Messages, acknowledgement, consent, confirmatory records and ownership changes remain signed supplementary events and cannot silently replace the workflow state.
-- **Owned referral progression:** accepted referrals receive a facility owner; attendance assigns the clinician; administrators and hospitals can reassign within the receiving organisation. The clinician worklist is assignment-scoped.
-- **Clinician-confirmed follow-up:** after attendance, the assigned clinician records a confirmatory assessment method or documents why another measurement is not indicated before returning a disposition. The software does not choose the clinical method.
-- **SLA exception processing:** overdue open referrals can be scanned by `python -m app.cli escalate-overdue`. The command is designed for an external scheduler and creates an idempotent operator exception; it does not page a human or move the clinical state automatically.
-- **Tamper evidence:** events are linked by SHA-256 hashes and signed with Ed25519. The event digest includes the actor public key. The system is tamper-evident, not tamper-proof against a database/application administrator who controls the signing keys and all stored records.
-- **PII separation:** patient contact, display name, demographics, measurements, clinical notes, dispositions, messages and notification bodies use patient-scoped encryption keys. Account emails are encrypted separately; lookup uses a keyed digest rather than plaintext email.
+- **One application boundary:** the web client is served by FastAPI; there is no separate frontend server.
+- **Explicit API contracts:** Pydantic validates request and response data; API routes delegate to application services.
+- **Server-derived authority:** protected endpoints derive the actor and role from the verified token and reload the active user. Client-supplied actor IDs and roles are not trusted.
+- **Organisation isolation:** pharmacy/PMV, hospital and clinician actions are scoped to the relevant organisation, referral and assignment.
+- **Atomic care transitions:** state validation, business writes and event append share the request transaction. A failed transition rolls back the related changes.
+- **Append-oriented history:** canonical care events determine workflow state. Supplementary events cannot silently advance or rewind the journey.
+- **Tamper evidence:** each event commits to its sequence, actor, payload and previous digest; Ed25519 signs the event hash. Verification detects altered or reordered stored events. This is tamper-evident, not tamper-proof against an operator who controls the application, database and signing keys.
+- **Explicit migrations:** Alembic owns database schema changes. Production schema creation is disabled; migrations are applied as a deployment step.
 
-## Visual interface and motion
+## Technology
 
-The FastAPI application keeps the original OneCare Loop visual identity rather than importing the Flask templates or their legacy routes. The current interface brings back the deep-navy/teal/peach palette, Bricolage Grotesque / Public Sans / IBM Plex Mono typography, six-part animated loop illustration, split-screen authentication treatment, stage-by-stage patient journey ring, ambient particle field, staggered reveals, ripple feedback, count-up metrics, desktop cursor treatment and subtle magnetic primary actions. The SPA uses native View Transitions when the browser supports them and CSS/JavaScript fallbacks elsewhere.
-
-These effects are implemented with CSS and lightweight browser JavaScript; the FastAPI release does **not** depend on the original external GSAP, ScrollTrigger or Lenis runtime. This avoids coupling the redesigned frontend to legacy Flask templates and third-party animation scripts. Native smooth scrolling is used where supported. Touch devices do not receive the custom cursor or magnetic pointer effects, and `prefers-reduced-motion` disables non-essential animation. Google Fonts are loaded when network access is available; system font fallbacks remain defined.
-
-The original six-stage ring is presentation, not a separate source of truth: the authenticated patient journey indicator is derived from recorded canonical care events. Supplementary events do not falsely advance or rewind the care stages.
-
-## API surface
-
-All routes are prefixed with `/api/v1`.
-
-| Capability | Endpoints |
+| Layer | Technology |
 |---|---|
-| Judge demo | `GET /demo`; `GET /demo/info`; `POST /demo/run` (synthetic-only and disabled by default) |
-| Authentication | `POST /auth/register`, `POST /auth/login`, `GET /auth/me`, `POST /auth/provision` |
-| Organisation management | `POST /organisations`, `GET /organisations` |
-| Screening | `POST /screenings` |
-| Referral | `POST /referrals`, `GET /referrals/{id}/history` |
-| Hospital operations | `GET /hospital/queue`, `/hospital/attention`; `POST /hospital/referrals/{id}/accept`, `/decline`, `/assign`, `/redirect`, `/confirmatory-assessment`, `/appointments`, `/attendance`, `/appointments/missed`, `/unreachable`, `/disposition` |
-| Patient portal | `POST /patients/otp/request`, `/otp/verify`; `GET /patients/me/receipt`; `POST /patients/me/receipt/acknowledge`, `/patients/me/referrals/{id}/decline`, `/reschedule-request`; `POST /patients/{id}/consent/revoke` |
-| Follow-up | `GET /patients/{id}/followups`; `POST` to the same path, `/assessment` and `/bp-control` |
-| Communications | `GET /red-flags`, `POST /red-flags/{id}/acknowledge`; `POST/GET /referrals/{id}/messages`; `GET /patients/me/notifications` |
-| FHIR R4 | `GET /fhir/metadata`, `GET /fhir/patients/{id}/bundle` |
-| Metrics | `GET /metrics` |
-| Audit | `GET /audit/patients/{id}/verify`, `GET /audit/patients/{id}/events` |
+| Runtime | Python 3.11+; CI matrix covers Python 3.11 and 3.12 |
+| Web/API | FastAPI, Uvicorn |
+| Contracts/configuration | Pydantic 2, pydantic-settings |
+| Persistence | SQLAlchemy 2, SQLite for local work, PostgreSQL for hosted deployment |
+| Schema evolution | Alembic |
+| Password security | Argon2 password hashing |
+| Event integrity | SHA-256 digests and Ed25519 signatures |
+| Data protection | Cryptography-based encryption with patient-scoped data keys and a separate PII key |
+| Browser tests | Playwright with Chromium |
+| CI | GitHub Actions |
+| Hosting | Render web service; database URL supplied by the hosting environment |
+
+## Repository map
+
+```text
+.
+├── app/
+│   ├── api/v1/          # Versioned HTTP routes and dependencies
+│   ├── core/            # Runtime settings and security primitives
+│   ├── db/              # SQLAlchemy models, engine and sessions
+│   ├── domain/          # Workflow states, ledger hashing and verification
+│   ├── schemas/         # Pydantic request/response contracts
+│   ├── services/        # Auth, care, privacy and FHIR use cases
+│   └── web/             # FastAPI-served interface and static assets
+├── migrations/          # Alembic environment and schema revisions
+├── tests/               # Unit, API, workflow, integrity and browser tests
+├── docs/                # Architecture, workflow, operator and security guides
+├── deploy/              # Judge-demo template and deployment checklist
+├── .github/workflows/   # CI pipeline
+├── Dockerfile
+├── compose.yaml
+├── pyproject.toml
+└── README.md
+```
+
+## API overview
+
+All application API routes use the `/api/v1` prefix.
+
+| Area | Representative routes |
+|---|---|
 | Health | `GET /health/live`, `GET /health/ready` |
+| Authentication | `POST /auth/login`, `POST /auth/register`, `GET /auth/me`, `POST /auth/provision` |
+| Screening | `POST /screenings` |
+| Referrals | `POST /referrals`, `GET /referrals/{id}/history` |
+| Hospital operations | `GET /hospital/queue`, `POST /hospital/referrals/{id}/accept`, `/assign`, `/appointments`, `/attendance`, `/disposition` |
+| Patient access | OTP request/verification, protected receipt and acknowledgement endpoints |
+| Follow-up | Patient follow-up plans, reassessment and BP-control endpoints |
+| Communications | Red-flag acknowledgement, referral messages and notification records |
+| Metrics | `GET /metrics` — admin/HMO access |
+| Audit | Patient event retrieval and hash/signature verification |
+| FHIR | `GET /fhir/metadata`, `GET /fhir/patients/{id}/bundle` |
+| Judge demo | `GET /demo/info`, `POST /demo/run` |
 
-## One-click judge demo
+The interactive OpenAPI documentation is available at `/docs` in local development. It is disabled in the production runtime configuration.
 
-The homepage links to `/demo`. The page calls the actual FastAPI care services to create one synthetic screening-to-follow-up journey, then animates the persisted eight-event sequence across the pharmacy, hospital, patient and clinician panels. It reports chain verification and offers a replay that does not create duplicate records. Demo reviewer emails/passwords are retrieved from configuration; passwords appear only when `DEMO_SHOW_CREDENTIALS=true`.
+## Run locally
 
-The demo is **disabled by default**. Enable it only in a separate synthetic-data deployment and database. It uses simulated notification records, no live NHIA/DHIN query and no financial-savings claim. See `docs/competition-demo-guide.md` for exact deployment configuration, reviewer access, walkthrough and limitations.
+### Requirements
 
-For local evaluator setup, copy `deploy/judge-demo.env.example` to `.env`. It contains placeholders only: generate three different application keys and set four distinct demo passwords before starting the service. It uses a separate synthetic SQLite database and disables patient self-registration. Never use this configuration with real patient information. When `DEMO_SHOW_CREDENTIALS=true`, the configured role credentials are displayed on the public demo page, so enable it only for a synthetic-data judging deployment.
+- Python 3.11 or 3.12 recommended.
+- Git.
+- Chromium installed through Playwright for browser tests.
 
-See `docs/care-workflow.md` for roles, state transitions and payload boundaries; `docs/security-review.md` for implemented controls and remaining risks; and `deploy/production-checklist.md` for deployment requirements.
-
-## Local setup — Windows PowerShell
-
-Use Python 3.11 or newer. From the extracted project directory:
+### Windows PowerShell
 
 ```powershell
+# Clone the repository
+git clone https://github.com/Vicgrace01/onecare-loop.v2.git
+Set-Location .\onecare-loop.v2
+
+# Create and activate a virtual environment
 py -3.11 -m venv .venv
-.venv\Scripts\Activate.ps1
+.\.venv\Scripts\Activate.ps1
+
+# Install the application and development dependencies
 python -m pip install --upgrade pip
-pip install -e ".[dev]"
+python -m pip install -e ".[dev]"
+
+# Prepare local configuration
 Copy-Item .env.example .env
 ```
 
-Generate separate secrets and place them in `.env`. For example, run this three times and use a different value for each secret:
+Edit `.env` and set three distinct random values for `SECRET_KEY`, `SIGNING_MASTER_KEY` and `PII_ENCRYPTION_KEY`. Keep `.env` private and out of Git. For ordinary development, leave public judge-demo switches disabled. The local example configuration uses SQLite.
 
-```powershell
-python -c "import secrets; print(secrets.token_urlsafe(48))"
-```
-
-Set `SECRET_KEY`, `SIGNING_MASTER_KEY` and `PII_ENCRYPTION_KEY` to different generated values. Do not commit `.env` or share production keys. A production deployment must supply a dedicated `PII_ENCRYPTION_KEY` distinct from `SIGNING_MASTER_KEY`. Leave the `DEMO_*` switches disabled for ordinary development or production. To prepare the judge demo, use the isolated synthetic deployment and follow `docs/competition-demo-guide.md`; never enable public demo credentials against a real-data database.
-
-For a local database, leave `DATABASE_URL=sqlite:///./onecare.db`. Apply the migrations:
+Apply the database migrations and start the application:
 
 ```powershell
 alembic upgrade head
-```
-
-Run the test suite:
-
-```powershell
-python -m playwright install chromium
-python -m pytest -q
-```
-
-Start the API:
-
-```powershell
 uvicorn app.main:app --reload
 ```
 
-Open:
+Open `http://127.0.0.1:8000`.
 
-- API documentation: `http://127.0.0.1:8000/docs`
-- Liveness: `http://127.0.0.1:8000/api/v1/health/live`
-- Readiness: `http://127.0.0.1:8000/api/v1/health/ready`
+### Verify locally
 
-## Local administrator setup
+```powershell
+# Install the browser used by the end-to-end tests
+python -m playwright install chromium
 
-No administrator is created by default. For a local-only demo, configure these values in `.env`:
+# Run the complete test suite
+python -m pytest -q
 
-```dotenv
-APP_ENV=development
-SEED_DEMO_ADMIN=true
-DEMO_ADMIN_EMAIL=admin@onecareloop.com
-DEMO_ADMIN_PASSWORD=replace-with-a-long-random-password
+# Check the current database connection through the readiness endpoint
+Invoke-RestMethod http://127.0.0.1:8000/api/v1/health/ready
 ```
 
-Restart the application. The demo administrator is created only when the seed flag is enabled. Production settings reject demo-admin seeding. Staff users are provisioned by an authenticated administrator and must be assigned to a matching organisation type. Public registration always creates a patient account.
+The latest recorded local validation for the release environment was **46 tests passed** on Python 3.11. The GitHub Actions workflow validates the Python 3.11 and 3.12 matrix, runs Chromium browser tests, performs an Alembic upgrade/downgrade/upgrade smoke test and builds the Docker image. See the live [Actions history](https://github.com/Vicgrace01/onecare-loop.v2/actions) for the status of the current commit.
 
-## Database and deployment
+## Deployment
 
-SQLite supports local development and single-instance demonstrations. PostgreSQL is the target hosted database. A non-root Docker image, PostgreSQL 16 Compose profile and GitHub Actions workflow are included. The CI workflow is configured for Python 3.11 and 3.12, Chromium browser tests, migration smoke tests and a Docker image build. Check the repository's Actions tab for the current result before treating a commit as release-validated. The Compose file is intended for a local deployment smoke test, not as a fully managed production platform.
+The public prototype is hosted at [onecare-loop-v2.onrender.com](https://onecare-loop-v2.onrender.com/). The hosted application uses a PostgreSQL `DATABASE_URL`; local development defaults to SQLite.
 
-For production set `AUTO_CREATE_SCHEMA=false` and apply Alembic migrations as a controlled deployment step. Do not let every web worker mutate the schema at startup. After the database is configured and migrations are applied, create the first administrator interactively with `python -m app.cli create-admin` (or `docker compose exec web python -m app.cli create-admin` for the local Compose setup). Production has no seeded default administrator.
+Important deployment settings:
 
-## Simulation and clinical boundaries
+```dotenv
+APP_ENV=production
+AUTO_CREATE_SCHEMA=false
+SEED_DEMO_ADMIN=false
+```
 
-The following are explicitly **not live integrations**:
+The hosted environment must also provide three different secrets: `SECRET_KEY`, `SIGNING_MASTER_KEY` and `PII_ENCRYPTION_KEY`. Do not commit them, include them in screenshots, or paste them into issue reports. The PII key must be separate from the signing key. Apply Alembic migrations before serving traffic. See [`deploy/production-checklist.md`](deploy/production-checklist.md).
 
-- **Eligibility:** the local adapter records `unknown` and explains that no NHIA/DHIN coverage assertion was made. No live DHIN or NHIA endpoint is called.
-- **Notifications:** notification bodies are stored as simulated. No SMS, WhatsApp or voice provider is called. In development/test only, OTP responses may contain a `development_code`; production never returns the OTP.
-- **Emergency alerts:** a red-flag event and acknowledgement can be recorded. `dispatch_enabled` is false; no ambulance or emergency coordinator is paged.
-- **Follow-up scheduling:** follow-up plans and due dates are stored; patient reminders and follow-up transitions still require an authenticated user action. A separate `python -m app.cli escalate-overdue` command creates idempotent SLA exception records for overdue open referrals when invoked by an external scheduler. No background worker runs inside the API process, and the command does not page a coordinator.
-- **Metrics:** operational referral closure and failure counts are calculated. A payer reimbursement/recovered-value figure is deliberately not invented.
-- **FHIR:** the app produces authenticated FHIR R4 collection bundles for the supported workflow resources. It is not a complete FHIR server with create/update/search interactions.
+The demo accounts are provisioned at application startup only when `DEMO_MODE_ENABLED=true`. They are designed for an isolated synthetic-data judging environment, not a database containing real patient records. `DEMO_SHOW_CREDENTIALS=true` displays the configured passwords on the public demo page; only use unique, disposable passwords in that environment.
 
-OneCare Loop records screening and care coordination. It does not diagnose, prescribe, replace clinician judgement or certify that care was clinically appropriate. Screening thresholds and workflows require licensed-clinician review before use with real patients.
+## What is intentionally not connected
 
-## Verification
+The prototype is explicit about the boundary between implemented workflow logic and services that would require clinical approval, provider agreements or production integration.
 
-The automated suite covers:
+| Area | Current state |
+|---|---|
+| NHIA / DHIN eligibility | No live query. Eligibility is recorded as `unknown`. |
+| SMS / WhatsApp / voice | Notification records are simulated; no external message is sent. |
+| Emergency response | Red-flag events and acknowledgements can be recorded; no ambulance or emergency coordinator is dispatched. |
+| Follow-up reminders | Plans and due dates are stored; no background reminder worker is running. |
+| SLA escalation | An idempotent CLI command can create overdue-referral exception records when invoked by an external scheduler; it does not page a person or change clinical state automatically. |
+| Financial savings | No payer value or recovered-savings estimate is fabricated. |
+| FHIR | Authenticated FHIR R4 collection-bundle export is implemented; this is not a complete FHIR server. |
+| Clinical decision-making | Screening and assessment records support coordination; the system does not diagnose, prescribe or replace clinician judgement. |
 
-- patient-only registration, staff provisioning, encrypted email-at-rest storage and legacy-email upgrade;
-- authentication, role reload and endpoint permission boundaries;
-- organisation-level screening/referral/hospital isolation;
-- BP validation, state-machine transitions and failure recovery;
-- full pharmacy-to-hospital-to-clinician-to-follow-up journey, including confirmatory assessment gating;
-- supplementary-event isolation, referral ownership, late redirection with a fresh SLA/unknown eligibility record, and idempotent SLA exception handling;
-- OTP, protected receipt and acknowledgement;
-- encrypted patient data, consent withdrawal/key shredding and post-erasure redaction;
-- signed hash-chain verification and tamper detection;
-- red-flag acknowledgement, consultation messages and FHIR export.
+## Safety, privacy and governance
 
-The browser-level tests run the application JavaScript in Chromium against a mocked browser-to-API contract; the care journey is separately covered by HTTP integration tests. Local validation has included Python compilation, JavaScript syntax checks and a fresh SQLite Alembic upgrade → downgrade → upgrade cycle. The first GitHub Actions run exposed two test-environment isolation issues and a browser-test timing race; this maintenance patch addresses those regressions. Treat a subsequent green Actions run as the CI release gate. A Docker daemon was not available for a local image build. This is prototype-level verification, not an independent security, regulatory or clinical approval.
+- Patient contact details, measurements, notes and other protected patient fields are encrypted using patient-scoped data keys.
+- Account email addresses are encrypted separately and indexed using keyed lookup material.
+- Staff actions are authenticated and restricted by role, organisation and referral assignment.
+- Consent withdrawal destroys the wrapped patient data key and disables the patient account; the event chain remains verifiable while protected historical content becomes unavailable to the application.
+- The event ledger is tamper-evident, not a substitute for independent external anchoring or a complete key-management service.
+- This prototype has not been independently approved for clinical use, regulatory compliance or real-patient deployment.
 
-## Before a real pilot
+**Do not enter real patient information into the public prototype.** Before any real-world pilot, the project requires clinical protocol approval, privacy impact and legal review, retention and incident-response policies, managed key storage and rotation, rate limiting, security testing, backup/restore validation, vendor and residency review, and signed agreements for external integrations.
 
-The security review, privacy impact assessment, retention policy, NDPA legal interpretation, clinical protocol sign-off, incident response, KMS/HSM-backed key management, external ledger anchoring, rate limiting, PostgreSQL operations, backup/restore, residency/vendor review, SMS/NHIA agreements and usability validation must be completed. Do not put real patient data into this prototype before those controls are reviewed and approved.
+## Documentation
+
+- [Architecture and trust boundaries](docs/architecture.md)
+- [Care workflow and state transitions](docs/care-workflow.md)
+- [Competition demo guide](docs/competition-demo-guide.md)
+- [Operator guide](docs/operator-guide.md)
+- [Security review and remaining risks](docs/security-review.md)
+- [Production deployment checklist](deploy/production-checklist.md)
+- [Release notes](RELEASE_NOTES.md)
+
+## Status and roadmap
+
+This is a deployed, test-validated prototype. The next engineering work should focus on improving the judging experience and validating the workflow with relevant clinical and operational stakeholders, then addressing production gaps before any real-world pilot.
+
+Near-term priorities:
+
+1. Capture real screenshots of the pharmacy, hospital, clinician, HMO and automatic-demo screens for the project documentation.
+2. Improve the end-to-end judging walkthrough and make the role-specific actions easier to discover.
+3. Validate referral exception handling, metrics definitions and patient-facing language with qualified reviewers.
+4. Complete the security, privacy, clinical and operational work listed in the production checklist.
 
 ## License
 
-MIT. Confirm ownership and third-party notices before release.
+MIT. Review ownership, dependencies and third-party notices before redistribution.
+
+---
+
+<div align="center">
+  <strong>OneCare Loop</strong><br />
+  <sub>Make every referral visible. Make every handoff accountable. Make follow-up part of the journey.</sub>
+</div>
