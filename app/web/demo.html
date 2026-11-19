@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0a121c">
+  <meta name="description" content="Watch one synthetic OneCare Loop case move from community screening to documented follow-up.">
+  <title>Watch OneCare Loop close a case</title>
+  <link rel="icon" href="/assets/mark.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/app.css">
+  <link rel="stylesheet" href="/assets/css/heritage.css">
+  <link rel="stylesheet" href="/assets/css/demo.css">
+  <script defer src="/assets/js/heritage-motion.js"></script>
+  <script defer src="/assets/js/demo.js"></script>
+</head>
+<body class="judge-demo">
+  <a class="skip-link" href="#demo-main">Skip to demonstration</a>
+  <main id="demo-main" class="jd-shell">
+    <header class="jd-header">
+      <a class="jd-brand" href="/" aria-label="OneCare Loop home">
+        <svg viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="15"/><path d="M18 10v16M10 18h16"/></svg>
+        <span>onecare<span>.</span>loop</span>
+      </a>
+      <div class="jd-header-center"><div class="jd-eyebrow">FUTURE HEALTH DIGITAL INNOVATION CHALLENGE</div><h1>Watch a case close.</h1></div>
+      <div class="jd-header-actions"><a class="jd-link" href="/">Back to homepage</a><span id="jd-status" class="jd-status" data-state="ready">READY TO RUN</span></div>
+    </header>
+
+    <section class="jd-intro">
+      <div><p class="jd-lede">One click creates a synthetic hypertension case through the real FastAPI care services, then replays the recorded handoffs, clinical review, follow-up plan and signed event history.</p>
+        <div class="jd-disclosure"><span class="jd-disclosure-dot"></span><span>DEMONSTRATION DATA ONLY</span><span class="jd-disclosure-sep">·</span><span>No real patients or external services</span></div>
+      </div>
+      <div class="jd-controls">
+        <button id="jd-start" class="jd-button jd-button-primary" type="button" disabled><span class="jd-button-icon">▶</span> Start full demo</button>
+        <button id="jd-replay" class="jd-button jd-button-secondary" type="button" disabled>↻ Replay animation</button>
+      </div>
+    </section>
+
+    <section class="jd-journey" aria-label="Six-step referral journey">
+      <div class="jd-journey-top"><span>THE CARE JOURNEY</span><span id="jd-progress-label">Awaiting first event</span></div>
+      <div class="jd-stages" id="jd-stages">
+        <div class="jd-stage" data-stage="SCREEN_POSITIVE"><span class="jd-stage-node">01</span><span class="jd-stage-label">Screened</span></div>
+        <i class="jd-stage-line"></i>
+        <div class="jd-stage" data-stage="REFERRAL_CREATED"><span class="jd-stage-node">02</span><span class="jd-stage-label">Referred</span></div>
+        <i class="jd-stage-line"></i>
+        <div class="jd-stage" data-stage="FACILITY_ACCEPTED"><span class="jd-stage-node">03</span><span class="jd-stage-label">Accepted</span></div>
+        <i class="jd-stage-line"></i>
+        <div class="jd-stage" data-stage="APPOINTMENT_BOOKED"><span class="jd-stage-node">04</span><span class="jd-stage-label">Booked</span></div>
+        <i class="jd-stage-line"></i>
+        <div class="jd-stage" data-stage="CLINICAL_ENCOUNTER_COMPLETED"><span class="jd-stage-node">05</span><span class="jd-stage-label">Attended</span></div>
+        <i class="jd-stage-line"></i>
+        <div class="jd-stage" data-stage="CLINICAL_DISPOSITION_RETURNED"><span class="jd-stage-node">06</span><span class="jd-stage-label">Outcome</span></div>
+      </div>
+    </section>
+
+    <section class="jd-board" aria-label="Live synthetic care coordination demonstration">
+      <article class="jd-panel" id="jd-pharmacy" data-panel="pharmacy">
+        <div class="jd-panel-head"><div><span class="jd-panel-kicker">01 / COMMUNITY</span><h2>Pharmacy screening</h2></div><span class="jd-panel-icon">＋</span></div>
+        <div class="jd-bp-block"><div><span class="jd-field-label">SYSTOLIC</span><strong id="jd-systolic">—</strong><small>mmHg</small></div><span class="jd-bp-slash">/</span><div><span class="jd-field-label">DIASTOLIC</span><strong id="jd-diastolic">—</strong><small>mmHg</small></div></div>
+        <div id="jd-screen-result" class="jd-inline-state">Waiting for screening</div>
+        <div class="jd-panel-foot"><span>Consent-led record</span><span id="jd-screen-ref" class="jd-mono">—</span></div>
+      </article>
+
+      <article class="jd-panel" id="jd-hospital" data-panel="hospital">
+        <div class="jd-panel-head"><div><span class="jd-panel-kicker">02 / RECEIVING FACILITY</span><h2>Hospital operations</h2></div><span class="jd-panel-icon">✚</span></div>
+        <div class="jd-hospital-facility" id="jd-facility">Awaiting referral</div>
+        <div class="jd-operation-list">
+          <div class="jd-operation" data-op="accepted"><span class="jd-operation-dot"></span><div><strong>Referral accepted</strong><small id="jd-owner">Owner not yet assigned</small></div><span class="jd-operation-state">PENDING</span></div>
+          <div class="jd-operation" data-op="booked"><span class="jd-operation-dot"></span><div><strong>Appointment booked</strong><small id="jd-appointment">Awaiting appointment</small></div><span class="jd-operation-state">PENDING</span></div>
+          <div class="jd-operation" data-op="attended"><span class="jd-operation-dot"></span><div><strong>Attendance attested</strong><small>Assigned clinician recorded encounter</small></div><span class="jd-operation-state">PENDING</span></div>
+        </div>
+      </article>
+
+      <article class="jd-panel" id="jd-patient" data-panel="patient">
+        <div class="jd-panel-head"><div><span class="jd-panel-kicker">03 / PATIENT EXPERIENCE</span><h2>Patient updates</h2></div><span class="jd-panel-icon">♡</span></div>
+        <div class="jd-patient-card"><div class="jd-avatar">AD</div><div><strong id="jd-patient-ref">Synthetic patient</strong><small id="jd-patient-state">No case started</small></div><span class="jd-patient-badge">SYNTHETIC</span></div>
+        <div id="jd-message-list" class="jd-message-list"><div class="jd-message-placeholder">Patient-facing updates will appear here as the case progresses.</div></div>
+        <div class="jd-panel-foot"><span>Delivery adapter</span><span class="jd-mono">SIMULATED · NO SMS SENT</span></div>
+      </article>
+
+      <article class="jd-panel" id="jd-clinician" data-panel="clinician">
+        <div class="jd-panel-head"><div><span class="jd-panel-kicker">04 / CLINICAL REVIEW</span><h2>Confirm and plan</h2></div><span class="jd-panel-icon">＋</span></div>
+        <div class="jd-confirmatory"><div><span class="jd-field-label">CONFIRMATORY BP</span><strong id="jd-confirmatory">—</strong></div><span id="jd-confirmatory-method" class="jd-chip">NOT RECORDED</span></div>
+        <div class="jd-clinical-line"><span>Clinician disposition</span><strong id="jd-disposition">Awaiting clinical review</strong></div>
+        <div class="jd-clinical-line"><span>Next planned action</span><strong id="jd-followup">No follow-up scheduled</strong></div>
+        <div class="jd-human-note">The prototype records a synthetic clinician's assessment. It does not diagnose, prescribe or replace professional judgement.</div>
+      </article>
+    </section>
+
+    <section class="jd-proof-row">
+      <div class="jd-proof-card"><span class="jd-proof-label">SIGNED EVENTS</span><strong id="jd-events-count">0</strong><small>Recorded in the patient event chain</small></div>
+      <div class="jd-proof-card"><span class="jd-proof-label">SIMULATED NOTIFICATIONS</span><strong id="jd-notifications-count">0</strong><small>Stored as records; not delivered externally</small></div>
+      <div class="jd-proof-card"><span class="jd-proof-label">CHAIN VERIFICATION</span><strong id="jd-chain-state" class="jd-chain-pending">NOT RUN</strong><small id="jd-chain-detail">Cryptographic verification will run after closure</small></div>
+      <div class="jd-proof-card"><span class="jd-proof-label">ELIGIBILITY</span><strong id="jd-eligibility">UNKNOWN</strong><small>No live NHIA/DHIN lookup is connected</small></div>
+    </section>
+
+    <section class="jd-timeline-wrap">
+      <div class="jd-timeline-head"><div><span class="jd-panel-kicker">AUDIT TRAIL</span><h2>Every handoff leaves evidence.</h2></div><span id="jd-run-reference" class="jd-mono">NO RUN YET</span></div>
+      <div id="jd-timeline" class="jd-timeline" aria-live="polite"><div class="jd-timeline-empty">Start the demonstration to see the signed event history appear.</div></div>
+    </section>
+
+    <section class="jd-credentials" id="jd-credentials">
+      <div class="jd-credentials-intro"><span class="jd-panel-kicker">REVIEWER ACCESS</span><h2>Test the role-based workspaces.</h2><p>Use these synthetic staff accounts from the homepage's secure sign-in screen. The patient is generated for each run and does not have a staff login.</p></div>
+      <div id="jd-credential-list" class="jd-credential-list"><div class="jd-credential-loading">Checking whether reviewer accounts are enabled…</div></div>
+    </section>
+
+    <section class="jd-caveats" id="jd-notice" role="note">Loading demonstration disclosure…</section>
+    <footer class="jd-footer"><span>ONECARE LOOP · FASTAPI PROTOTYPE</span><span>Evidence-backed coordination · Human-governed clinical decisions</span><a href="/">Return to homepage ↑</a></footer>
+    <div id="jd-caption" class="jd-caption" role="status" aria-live="polite"></div>
+  </main>
+</body>
+</html>

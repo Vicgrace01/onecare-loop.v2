@@ -1,0 +1,57 @@
+name: OneCare CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+      - name: Compile Python sources
+        run: python -m compileall -q app tests migrations
+      - name: Install headless browser
+        run: python -m playwright install --with-deps chromium
+      - name: Test suite
+        env:
+          APP_ENV: test
+          SECRET_KEY: ci-test-secret-that-is-long-enough-for-unit-tests
+          SIGNING_MASTER_KEY: ci-signing-key-that-is-long-enough-for-unit-tests
+          PII_ENCRYPTION_KEY: ci-pii-key-that-is-long-enough-for-unit-tests
+        run: pytest -q
+      - name: Migration upgrade smoke test
+        env:
+          APP_ENV: test
+          SECRET_KEY: ci-migration-secret-that-is-long-enough
+          SIGNING_MASTER_KEY: ci-migration-signing-key-that-is-long-enough
+          PII_ENCRYPTION_KEY: ci-migration-pii-key-that-is-long-enough
+          DATABASE_URL: sqlite:///./ci-migrations.db
+          AUTO_CREATE_SCHEMA: "false"
+        run: |
+          alembic upgrade head
+          alembic downgrade -1
+          alembic upgrade head
+
+      - name: Build Docker image
+        run: docker build -t onecare-loop:ci .
