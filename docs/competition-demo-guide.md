@@ -24,26 +24,32 @@ This is not a hard-coded front-end animation: the screening, referral, acceptanc
 
 The ring presents six principal workflow milestones. The event timeline also shows supplementary steps, including the confirmatory assessment and follow-up scheduling.
 
-## Fastest local judge setup
+## Fast local judge setup
 
-The project includes `.env.judge.example` with four intentionally public, synthetic-only test accounts. In PowerShell, from the project root:
+The repository includes `deploy/judge-demo.env.example`, a local synthetic-demo template containing placeholders, not working credentials. From the project root in PowerShell:
 
 ```powershell
-Copy-Item .env.judge.example .env
+Copy-Item .\deploy\judge-demo.env.example .\.env
+notepad .\.env
+```
+
+Before starting the app, replace `SECRET_KEY`, `SIGNING_MASTER_KEY` and `PII_ENCRYPTION_KEY` with three separately generated values. Replace all four `DEMO_*_PASSWORD` placeholders with different passwords of at least 12 characters. Generate a value with:
+
+```powershell
+python -c "import secrets; print(secrets.token_urlsafe(24))"
+```
+
+Then install dependencies, apply the schema and run the app:
+
+```powershell
 python -m pip install -e ".[dev]"
+alembic upgrade head
 uvicorn app.main:app --reload
 ```
 
-Open `http://127.0.0.1:8000/` and select **Watch the full automatic demo**, or open `http://127.0.0.1:8000/demo` directly. The demo page displays these four role credentials because `DEMO_SHOW_CREDENTIALS=true` is enabled in the judge example file.
+Open `http://127.0.0.1:8000/` and select **Watch the full automatic demo**, or open `http://127.0.0.1:8000/demo` directly. The page reads reviewer accounts from runtime configuration. It displays passwords only when `DEMO_SHOW_CREDENTIALS=true`.
 
-| Role | Login email | Public judge-demo password |
-|---|---|---|
-| Pharmacy | `demo.pharmacy@onecareloop.com` | `Demo-Pharmacy-2026-OneCare!` |
-| Hospital | `demo.hospital@onecareloop.com` | `Demo-Hospital-2026-OneCare!` |
-| Clinician | `demo.clinician@onecareloop.com` | `Demo-Clinician-2026-OneCare!` |
-| HMO reviewer | `demo.hmo@onecareloop.com` | `Demo-HMO-2026-OneCare!` |
-
-These are deliberately public evaluation accounts, not secure personal accounts. The judge example uses the separate `onecare-judge-demo.db` database and disables patient self-registration. Replace the three local-only application keys before hosting anywhere, keep this database synthetic-only, and never reuse the demo passwords. The deployment's environment variables—not the committed HTML—are the source of the credential values displayed by the page.
+This template is for a local synthetic database only. Never use it with real patient information or reuse its placeholder values. For hosted judging, configure the equivalent variables in the hosting provider's environment settings, use PostgreSQL, replace every key and password, and apply Alembic migrations before starting the service.
 
 ## Required environment configuration
 

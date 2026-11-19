@@ -17,7 +17,7 @@
 - The page choreographs the six-stage loop across pharmacy, hospital, patient and clinician panels; the timeline shows eight persisted/signed events.
 - It displays the confirmatory reading, clinician disposition, follow-up due date and chain verification result.
 - Replay does not call the API again and does not create duplicate records.
-- `.env.judge.example` gives a separate disposable SQLite database and four public evaluator accounts. Credentials are loaded from runtime configuration and shown only when `DEMO_SHOW_CREDENTIALS=true`.
+- `deploy/judge-demo.env.example` provides a local synthetic-only configuration with placeholders. Operators must replace all application keys and demo passwords before use. Credentials are loaded from runtime configuration and shown only when `DEMO_SHOW_CREDENTIALS=true`.
 - The endpoint is synthetic-only, rate-limited per process and transparent about simulated messaging, unknown eligibility and the absence of real outcome/savings claims.
 
 ## Validation
@@ -26,4 +26,4 @@ On 19 November 2026, all **46 collected tests passed in three separate runs**: 4
 
 ## Boundaries
 
-Live NHIA/DHIN, SMS/WhatsApp, claims and emergency dispatch remain unconnected. SLA exception processing requires an external scheduler. The FHIR export is not a certified FHIR server. No clinic pilot or real-world outcome evidence has been collected. The public judge credentials are intentionally non-secret and must only be used in a dedicated synthetic-data environment.
+Live NHIA/DHIN, SMS/WhatsApp, claims and emergency dispatch remain unconnected. SLA exception processing requires an external scheduler. The FHIR export is not a certified FHIR server. No clinic pilot or real-world outcome evidence has been collected. Judge credentials are configured at runtime and must only be exposed in a dedicated synthetic-data environment.

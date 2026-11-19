@@ -45,6 +45,6 @@ def test_production_rejects_missing_or_reused_pii_encryption_key():
         "seed_demo_admin": False,
     }
     with pytest.raises(ValidationError):
-        Settings(**shared)
+        Settings(**{**shared, "pii_encryption_key": None})
     with pytest.raises(ValidationError):
         Settings(**{**shared, "pii_encryption_key": shared["signing_master_key"]})

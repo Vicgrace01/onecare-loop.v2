@@ -6,16 +6,18 @@ OneCare Loop is a care-coordination and referral-closure platform for a hyperten
 
 This is a clean replacement for the original Flask prototype. The new application is a modular FastAPI monolith with SQLAlchemy 2, Pydantic 2 and Alembic. It is built as a single deployable service without splitting a prototype into premature microservices.
 
-## Delivery status
+## Current release status
 
-| Component | Status |
+| Area | Status |
 |---|---|
-| Part 1 — architecture, database, identity, authorisation, state machine and signed ledger | Complete |
-| Part 2 — care operations, patient privacy, referral closure, follow-up, notifications and FHIR export | Complete |
-| Part 3 — responsive user interface, deployment profile, CI and final integration pass | Complete |
-| Live NHIA/DHIN, SMS/WhatsApp, claims settlement and emergency dispatch integrations | Not connected; require provider agreements, credentials and operational validation |
+| FastAPI application, data model and migrations | Implemented |
+| Hypertension screening-to-follow-up workflow | Implemented as a prototype; clinical review is still required |
+| Responsive web interface and one-click synthetic judge demo | Implemented locally |
+| Automated tests and CI | Regression fixes are being verified in GitHub Actions |
+| Hosted deployment | Not yet deployed |
+| Live NHIA/DHIN, SMS/WhatsApp, claims and emergency dispatch | Not connected; provider agreements and integration validation are still required |
 
-The three implementation deliveries are combined in this repository. The responsive web application is served by the same FastAPI service; there is no separate Node frontend server. The interactive API reference is available at `http://127.0.0.1:8000/docs` when running in development mode.
+The application is a single deployable FastAPI service. Its web interface is served by FastAPI; there is no separate Node frontend server. The interactive API reference is available at `http://127.0.0.1:8000/docs` when running in development mode.
 
 ## Product workflow
 
@@ -59,7 +61,7 @@ app/
 migrations/    Alembic schema history
   versions/    initial schema, integrity constraints, workflow/privacy, email encryption
 tests/          auth, permissions, domain, crypto, schema, care-journey, UI and Chromium browser tests
-docs/           architecture, original-repo audit, security review and workflow guide
+docs/           architecture, care workflow, judge guide, operator guide and security review
 ```
 
 ### Engineering decisions
@@ -110,9 +112,9 @@ The homepage links to `/demo`. The page calls the actual FastAPI care services t
 
 The demo is **disabled by default**. Enable it only in a separate synthetic-data deployment and database. It uses simulated notification records, no live NHIA/DHIN query and no financial-savings claim. See `docs/competition-demo-guide.md` for exact deployment configuration, reviewer access, walkthrough and limitations.
 
-For a fast local evaluator setup, `.env.judge.example` contains a disposable synthetic database configuration and four intentionally public judge-only role accounts. Copy it to `.env` only for the judge demo, replace its local-only application keys before hosting, and never reuse these passwords or use that database for real patient data. See the guide for the exact credentials.
+For local evaluator setup, copy `deploy/judge-demo.env.example` to `.env`. It contains placeholders only: generate three different application keys and set four distinct demo passwords before starting the service. It uses a separate synthetic SQLite database and disables patient self-registration. Never use this configuration with real patient information. When `DEMO_SHOW_CREDENTIALS=true`, the configured role credentials are displayed on the public demo page, so enable it only for a synthetic-data judging deployment.
 
-See `docs/care-workflow.md` for roles, state transitions, payload boundaries and limitations; `docs/public-competitor-benchmark.md` for the public repository comparison and evidence-weighted scorecard; and `docs/product-decisions.md` for the original-repo and public challenge research decisions.
+See `docs/care-workflow.md` for roles, state transitions and payload boundaries; `docs/security-review.md` for implemented controls and remaining risks; and `deploy/production-checklist.md` for deployment requirements.
 
 ## Local setup — Windows PowerShell
 
@@ -174,7 +176,7 @@ Restart the application. The demo administrator is created only when the seed fl
 
 ## Database and deployment
 
-SQLite supports local development and single-instance demonstrations. PostgreSQL is the target hosted database. A non-root Docker image, PostgreSQL 16 Compose profile and GitHub Actions workflow are included. The CI workflow runs the Python suite on Python 3.11 and 3.12, installs Chromium for the browser-level test, runs migrations and builds the Docker image. The Compose file is intended for a local deployment smoke test, not as a fully managed production platform.
+SQLite supports local development and single-instance demonstrations. PostgreSQL is the target hosted database. A non-root Docker image, PostgreSQL 16 Compose profile and GitHub Actions workflow are included. The CI workflow is configured for Python 3.11 and 3.12, Chromium browser tests, migration smoke tests and a Docker image build. Check the repository's Actions tab for the current result before treating a commit as release-validated. The Compose file is intended for a local deployment smoke test, not as a fully managed production platform.
 
 For production set `AUTO_CREATE_SCHEMA=false` and apply Alembic migrations as a controlled deployment step. Do not let every web worker mutate the schema at startup. After the database is configured and migrations are applied, create the first administrator interactively with `python -m app.cli create-admin` (or `docker compose exec web python -m app.cli create-admin` for the local Compose setup). Production has no seeded default administrator.
 
@@ -191,10 +193,6 @@ The following are explicitly **not live integrations**:
 
 OneCare Loop records screening and care coordination. It does not diagnose, prescribe, replace clinician judgement or certify that care was clinically appropriate. Screening thresholds and workflows require licensed-clinician review before use with real patients.
 
-## Publishing to GitHub
-
-See [`docs/publish-to-github.md`](docs/publish-to-github.md) for the exact PowerShell commands to validate the combined folder, replace the contents of the existing repository on a new branch, push it, and open a pull request. The instructions deliberately keep the original `main` branch untouched until you review the replacement.
-
 ## Verification
 
 The automated suite covers:
@@ -210,7 +208,7 @@ The automated suite covers:
 - signed hash-chain verification and tamper detection;
 - red-flag acknowledgement, consultation messages and FHIR export.
 
-The browser-level test runs the real application JavaScript in Chromium while mocking the browser-to-API contract; the API journey is separately covered by HTTP integration tests. JavaScript syntax checking, Python compilation and a fresh SQLite Alembic upgrade → downgrade → upgrade cycle pass. Docker/Compose were configured and CI includes an image build, but a Docker daemon was not available for a local image build in this environment. This is prototype-level verification, not an independent security, regulatory or clinical approval.
+The browser-level tests run the application JavaScript in Chromium against a mocked browser-to-API contract; the care journey is separately covered by HTTP integration tests. Local validation has included Python compilation, JavaScript syntax checks and a fresh SQLite Alembic upgrade → downgrade → upgrade cycle. The first GitHub Actions run exposed two test-environment isolation issues and a browser-test timing race; this maintenance patch addresses those regressions. Treat a subsequent green Actions run as the CI release gate. A Docker daemon was not available for a local image build. This is prototype-level verification, not an independent security, regulatory or clinical approval.
 
 ## Before a real pilot
 

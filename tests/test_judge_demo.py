@@ -98,10 +98,10 @@ def test_judge_demo_hides_passwords_unless_explicitly_enabled(tmp_path):
         assert all("password" not in account for account in info["roles"])
 
 
-def test_public_judge_env_example_creates_the_displayed_login_credentials(tmp_path):
+def test_judge_demo_env_template_creates_the_displayed_login_credentials(tmp_path):
     from pathlib import Path
 
-    env_file = Path(__file__).resolve().parents[1] / ".env.judge.example"
+    env_file = Path(__file__).resolve().parents[1] / "deploy" / "judge-demo.env.example"
     settings = Settings(
         _env_file=env_file,
         database_url=f"sqlite:///{tmp_path / 'configured-judge-demo.db'}",

@@ -208,6 +208,9 @@ def test_confirmatory_assignment_and_late_redirect_forms_call_the_api():
         redirect_form = page.locator('form[data-form="redirect-referral"]')
         redirect_form.locator('select[name="facility_id"]').select_option("alternate-org")
         redirect_form.locator('button[type=submit]').click()
+        page.wait_for_function(
+            "window.__calls.some(call => call.url.endsWith('/ref-redirect/redirect') && call.method === 'POST')"
+        )
 
         calls = page.evaluate("window.__calls")
         assign_call = next(call for call in calls if call["url"].endswith("/ref-assign/assign"))
